@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.venv/
+__pycache__/
+*.pyc
+data/drawings/*.png
+data/thumbs/*.png
+data/drawings.db
+data/settings.json
+.DS_Store
+.vite/

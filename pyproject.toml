@@ -1,0 +1,31 @@
+[project]
+name = "drawing-installation-service"
+version = "0.1.0"
+description = "CV + WebSocket service for drawing-to-game installation"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "websockets>=12",
+    "opencv-python>=4.9",
+    "numpy>=1.26",
+    "scikit-learn>=1.4",
+    "pillow>=10",
+    "mediapipe>=0.10",
+    "pyserial>=3.5",
+    "aiosqlite>=0.19",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "pygrabber>=0.2; platform_system=='Windows'",
+]
+
+[project.optional-dependencies]
+ml = ["rembg>=2.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["service*"]

@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: drawing-installation-service
+Version: 0.1.0
+Summary: CV + WebSocket service for drawing-to-game installation
+Requires-Python: >=3.10
+Requires-Dist: fastapi>=0.110
+Requires-Dist: uvicorn[standard]>=0.27
+Requires-Dist: websockets>=12
+Requires-Dist: opencv-python>=4.9
+Requires-Dist: numpy>=1.26
+Requires-Dist: scikit-learn>=1.4
+Requires-Dist: pillow>=10
+Requires-Dist: mediapipe>=0.10
+Requires-Dist: pyserial>=3.5
+Requires-Dist: aiosqlite>=0.19
+Requires-Dist: pydantic>=2
+Requires-Dist: pydantic-settings>=2
+Requires-Dist: pygrabber>=0.2; platform_system == "Windows"
+Provides-Extra: ml
+Requires-Dist: rembg>=2.0; extra == "ml"

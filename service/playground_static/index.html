@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Capture Playground</title>
+  <meta name="viewport" content="width=1100" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #0d0e16; color: #e6e6f0; }
+    header { padding: 14px 20px; border-bottom: 1px solid #222; display: flex; gap: 14px; align-items: center; }
+    header h1 { font-size: 18px; margin: 0; }
+    main { display: grid; grid-template-columns: 360px 1fr; gap: 20px; padding: 20px; }
+    .panel { background: #15162028; border: 1px solid #232336; padding: 14px; border-radius: 10px; }
+    label { display: block; font-size: 12px; opacity: .8; margin-top: 10px; }
+    input[type=range] { width: 100%; }
+    select, input[type=number] { background: #1a1b27; border: 1px solid #303046; color: #fff; padding: 6px 8px; border-radius: 6px; width: 100%; }
+    .row { display: flex; align-items: center; gap: 8px; }
+    .row .val { font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; opacity: .85; }
+    .preview { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .preview figure { margin: 0; }
+    .preview figcaption { font-size: 12px; opacity: .7; margin-bottom: 6px; }
+    .preview .frame { background: repeating-conic-gradient(#1a1b25 0% 25%, #14151c 0% 50%) 0 0/16px 16px; border: 1px solid #2a2a3a; border-radius: 8px; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .preview img { max-width: 100%; max-height: 100%; image-rendering: auto; }
+    .actions { display: flex; gap: 8px; margin-top: 16px; }
+    button { background: #2c3252; border: 0; color: #fff; padding: 9px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    button.primary { background: #4a64d3; }
+    button:active { transform: translateY(1px); }
+    .status { font-size: 12px; opacity: .7; }
+    .small { font-size: 11px; opacity: .6; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Capture Playground</h1>
+    <span class="status" id="status">connecting…</span>
+    <span style="flex:1"></span>
+    <label style="margin:0;display:flex;align-items:center;gap:6px">camera
+      <select id="cam" style="width:auto"></select>
+    </label>
+    <label style="margin:0;display:flex;align-items:center;gap:6px">refresh ms
+      <input id="rate" type="number" min="100" max="2000" step="50" value="350" style="width:90px" />
+    </label>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h3 style="margin:0 0 6px">Detection</h3>
+      <div class="small">Sheet detection &amp; warp</div>
+
+      <label>Min sheet area (% of frame) <span class="val" id="v-min_area">5.0</span></label>
+      <input id="min_area" type="range" min="1" max="40" step="0.5" value="5" />
+
+      <label>Inset crop after warp (%) <span class="val" id="v-inset">6</span></label>
+      <input id="inset" type="range" min="0" max="20" step="1" value="6" />
+
+      <h3 style="margin:18px 0 6px">BG removal</h3>
+      <div class="small">Adaptive threshold + Otsu mask</div>
+
+      <label>Block size (odd) <span class="val" id="v-block_size">41</span></label>
+      <input id="block_size" type="range" min="9" max="151" step="2" value="41" />
+
+      <label>Threshold C <span class="val" id="v-C">12</span></label>
+      <input id="C" type="range" min="-10" max="40" step="1" value="12" />
+
+      <label>Min speckle area (px) <span class="val" id="v-speckle">8</span></label>
+      <input id="speckle" type="range" min="0" max="200" step="1" value="8" />
+
+      <label>Edge feather <span class="val" id="v-feather">1</span></label>
+      <input id="feather" type="range" min="0" max="6" step="1" value="1" />
+
+      <div class="actions">
+        <button class="primary" id="save">Save to settings</button>
+        <button id="reset">Reset</button>
+        <button id="snapshot">Open PNG</button>
+      </div>
+      <div class="status" id="save-status" style="margin-top:8px"></div>
+    </section>
+
+    <section>
+      <div class="preview">
+        <figure>
+          <figcaption>Raw warped sheet</figcaption>
+          <div class="frame"><img id="raw" alt="" /></div>
+        </figure>
+        <figure>
+          <figcaption>Processed (transparent BG)</figcaption>
+          <div class="frame"><img id="processed" alt="" /></div>
+        </figure>
+      </div>
+      <p class="small" style="margin-top:10px">
+        Hold a marker sheet in front of the selected camera. Tweak sliders → preview refreshes
+        every <code id="rate-echo">350</code> ms. <b>Save to settings</b> persists the values
+        so the live capture pipeline uses them on the next drawing.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const ids = ["min_area","inset","block_size","C","speckle","feather"];
+    const valEls = Object.fromEntries(ids.map(id => [id, $("v-" + id)]));
+    const status = $("status");
+
+    function readState() {
+      return {
+        min_area: parseFloat($("min_area").value) / 100,
+        inset: parseFloat($("inset").value) / 100,
+        block_size: parseInt($("block_size").value),
+        C: parseInt($("C").value),
+        speckle: parseInt($("speckle").value),
+        feather: parseInt($("feather").value),
+      };
+    }
+    function refreshLabels() {
+      valEls.min_area.textContent = (parseFloat($("min_area").value)).toFixed(1);
+      valEls.inset.textContent = $("inset").value;
+      valEls.block_size.textContent = $("block_size").value;
+      valEls.C.textContent = $("C").value;
+      valEls.speckle.textContent = $("speckle").value;
+      valEls.feather.textContent = $("feather").value;
+    }
+
+    let timer = null;
+    function tick() {
+      const s = readState();
+      const cam = $("cam").value;
+      const q = `cam=${encodeURIComponent(cam)}&min_area=${s.min_area}&inset=${s.inset}` +
+                `&block_size=${s.block_size}&C=${s.C}&speckle=${s.speckle}&feather=${s.feather}` +
+                `&t=${Date.now()}`;
+      $("raw").src = `/playground/raw.jpg?${q}`;
+      $("processed").src = `/playground/processed.png?${q}`;
+    }
+    function reschedule() {
+      const ms = Math.max(100, parseInt($("rate").value) || 350);
+      $("rate-echo").textContent = ms;
+      if (timer) clearInterval(timer);
+      timer = setInterval(tick, ms);
+    }
+
+    async function init() {
+      try {
+        const r = await fetch("/playground/state");
+        const j = await r.json();
+        for (const c of j.cameras) {
+          const o = document.createElement("option");
+          o.value = c; o.textContent = c;
+          $("cam").appendChild(o);
+        }
+        if (!j.cameras.length) {
+          status.textContent = "no camera open in service";
+          return;
+        }
+        const s = j.settings;
+        $("min_area").value = (s.paper_min_area_ratio * 100).toFixed(1);
+        $("inset").value = Math.round((s.paper_inset ?? 0.06) * 100);
+        $("block_size").value = s.bg_block_size ?? 41;
+        $("C").value = s.bg_C ?? 12;
+        $("speckle").value = s.bg_speckle ?? 8;
+        $("feather").value = s.bg_feather ?? 1;
+        refreshLabels();
+        status.textContent = "ready";
+        reschedule();
+      } catch (e) {
+        status.textContent = "service unreachable";
+      }
+    }
+
+    ids.forEach((id) => $(id).addEventListener("input", () => { refreshLabels(); tick(); }));
+    $("rate").addEventListener("change", reschedule);
+    $("cam").addEventListener("change", tick);
+    $("snapshot").addEventListener("click", () => window.open($("processed").src, "_blank"));
+    $("reset").addEventListener("click", () => {
+      $("min_area").value = 5; $("inset").value = 6;
+      $("block_size").value = 41; $("C").value = 12; $("speckle").value = 8; $("feather").value = 1;
+      refreshLabels(); tick();
+    });
+    $("save").addEventListener("click", async () => {
+      const s = readState();
+      const patch = {
+        paper_min_area_ratio: s.min_area,
+        paper_inset: s.inset,
+        bg_block_size: s.block_size,
+        bg_C: s.C,
+        bg_speckle: s.speckle,
+        bg_feather: s.feather,
+      };
+      const r = await fetch("/playground/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const j = await r.json();
+      $("save-status").textContent = j.ok ? "saved ✓" : "save failed";
+      setTimeout(() => $("save-status").textContent = "", 2000);
+    });
+
+    init();
+  </script>
+</body>
+</html>

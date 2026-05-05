@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tablet — Shape Organizer</title>
+    <style>
+      body { margin: 0; font-family: system-ui; background: #0a0a14; color: #fff; padding: 20px; }
+      h1 { font-size: 22px; margin: 0 0 16px; }
+      .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+      button { font-size: 22px; padding: 22px; border: 0; border-radius: 14px; background: #2a2a4a; color: #fff; }
+      button:active { background: #4a4a7a; }
+      .games { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .games button { font-size: 16px; padding: 16px; }
+      .status { margin-top: 12px; opacity: .7; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>Shape Organizer</h1>
+    <div class="row">
+      <button data-shape="grid">Grid</button>
+      <button data-shape="circle">Circle</button>
+      <button data-shape="heart">Heart</button>
+      <button data-shape="star">Star</button>
+    </div>
+    <h1>Switch Game</h1>
+    <div class="games">
+      <button data-game="world">World</button>
+      <button data-game="platformer">Platformer</button>
+      <button data-game="tank">Tank</button>
+      <button data-game="race">Race</button>
+      <button data-game="shape">Shape</button>
+    </div>
+    <div class="status" id="s">connecting…</div>
+    <script>
+      const url = `ws://${location.hostname}:${location.port || 8765}/ws`;
+      let ws;
+      const s = document.getElementById("s");
+      function connect() {
+        ws = new WebSocket(url);
+        ws.onopen = () => (s.textContent = "connected");
+        ws.onclose = () => { s.textContent = "disconnected — retrying"; setTimeout(connect, 1000); };
+      }
+      connect();
+      function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+      document.querySelectorAll("[data-shape]").forEach((b) =>
+        b.addEventListener("click", () => send({ type: "tablet:shape", shape: b.dataset.shape }))
+      );
+      document.querySelectorAll("[data-game]").forEach((b) =>
+        b.addEventListener("click", () => send({ type: "admin:set_game", game: b.dataset.game }))
+      );
+    </script>
+  </body>
+</html>

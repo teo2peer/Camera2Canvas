@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Instructions</title>
+    <style>
+      /* Theme colour-scheme is set dynamically by core/theme.ts via
+         <html data-theme="…">; a small adapter here lets the body stay
+         theme-aware even though it doesn't add the .theme-aware class until
+         JS runs. */
+      :root[data-theme="light"] { color-scheme: light; }
+      :root[data-theme="dark"]  { color-scheme: dark; }
+      html, body {
+        margin: 0; height: 100%; overflow: hidden;
+        background: var(--page-bg, #08090f);
+        color: var(--text, #fff);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center;
+      }
+      h1 { font-size: 4.4vw; margin: .25em 0; letter-spacing: .02em; }
+      p  { font-size: 1.8vw; opacity: .85; max-width: 80vw; margin: .25em 0; }
+      .stage { position: relative; width: 36vw; height: 36vw; margin: 1vh auto; }
+
+      /* outer ring */
+      .ring {
+        position: absolute; inset: 0; border-radius: 50%;
+        border: .5vw solid color-mix(in srgb, var(--accent, #7fb0ff) 35%, transparent);
+        box-shadow:
+          0 0 6vw color-mix(in srgb, var(--accent, #7fb0ff) 15%, transparent) inset,
+          0 0 6vw color-mix(in srgb, var(--accent, #7fb0ff) 25%, transparent);
+        overflow: hidden;
+        background: var(--bg-1, #0a0c14);
+      }
+      /* live camera fills the ring — mirrored so the user sees a "selfie"
+         view of what they are showing. Affects the captured PNG preview too,
+         but only visually on this screen; the stored file is untouched. */
+      .ring img {
+        width: 100%; height: 100%; object-fit: cover; display: block;
+        filter: contrast(1.05) saturate(1.05);
+        transform: scaleX(-1);
+        transition: filter .35s, transform .35s;
+      }
+      /* "captured" treatment: drawing replaces video, on a clean canvas, with a halo */
+      .ring.captured { background: #fafafa; }
+      .ring.captured img {
+        object-fit: contain;
+        padding: 6%;
+        filter: drop-shadow(0 0 3vw #fff) drop-shadow(0 0 6vw #7fb0ff)
+                drop-shadow(0 0 9vw rgba(127, 176, 255, .55));
+        /* keep the same scaleX(-1) flip as the live preview */
+        transform: scaleX(-1) scale(.96);
+        animation: capglow 1.2s ease-out;
+      }
+      @keyframes capglow {
+        0%   { transform: scaleX(-1) scale(1.05); filter: drop-shadow(0 0 0vw #fff) drop-shadow(0 0 0vw #fff); }
+        45%  { transform: scaleX(-1) scale(.96);  filter: drop-shadow(0 0 6vw #fff) drop-shadow(0 0 10vw #fff); }
+        100% { transform: scaleX(-1) scale(.96);  filter: drop-shadow(0 0 3vw #fff) drop-shadow(0 0 6vw #7fb0ff); }
+      }
+      /* the "drop of life" — a smaller circle that grows as detection stabilises */
+      .drop {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0);
+        width: 60%; height: 60%; border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, rgba(120, 220, 160, .65) 0%, rgba(80, 200, 130, .35) 60%, rgba(40, 160, 100, 0) 100%);
+        box-shadow: 0 0 8vw rgba(120, 220, 160, .35);
+        transition: transform .25s ease, opacity .35s;
+        pointer-events: none;
+        opacity: 0;
+      }
+      .drop.show { opacity: 1; }
+
+      /* heart pulse phase */
+      .heart {
+        position: absolute; inset: 0; display: none;
+        align-items: center; justify-content: center;
+        background: radial-gradient(circle, rgba(0,0,0,.55) 0%, rgba(0,0,0,.15) 60%, transparent 80%);
+        border-radius: 50%;
+      }
+      .heart.show { display: flex; }
+      .heart svg { width: 55%; height: 55%; filter: drop-shadow(0 0 4vw rgba(255, 90, 110, .65)); }
+      @keyframes heartbeat {
+        0%, 28%, 70%, 100% { transform: scale(1); }
+        12% { transform: scale(1.18); }
+        40% { transform: scale(1.10); }
+      }
+      .heart svg { animation: heartbeat 1.1s ease-in-out infinite; transform-origin: center; }
+
+      .ring.flash { animation: flash .7s ease-out; }
+      @keyframes flash {
+        0%   { box-shadow: 0 0 0 #fff inset, 0 0 0 #fff; }
+        30%  { box-shadow: 0 0 12vw #fff inset, 0 0 12vw #fff; }
+        100% {
+          box-shadow:
+            0 0 6vw color-mix(in srgb, var(--accent, #7fb0ff) 15%, transparent) inset,
+            0 0 6vw color-mix(in srgb, var(--accent, #7fb0ff) 25%, transparent);
+        }
+      }
+
+      .steps { display: flex; gap: 3vw; margin-top: 2vh; font-size: 1.2vw; color: var(--text-dim, #cdd0e8); }
+      .step  { opacity: .35; transition: all .4s; }
+      .step.active { opacity: 1; color: var(--accent, #7fb0ff); }
+      .step.done   { opacity: .9; color: #2bb673; }
+
+      .pulse { animation: p 1.6s ease-in-out infinite; }
+      @keyframes p { 0%,100% { opacity: .7; } 50% { opacity: 1; } }
+    </style>
+  </head>
+  <body>
+    <div class="stage" id="stage">
+      <div class="ring" id="ring">
+        <img id="cam" alt="" />
+      </div>
+      <div class="drop" id="drop"></div>
+      <div class="heart" id="heart">
+        <svg viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="hg" cx="50%" cy="40%" r="60%">
+              <stop offset="0%"   stop-color="#ff8a9b"/>
+              <stop offset="60%"  stop-color="#ff4a63"/>
+              <stop offset="100%" stop-color="#a4203b"/>
+            </radialGradient>
+          </defs>
+          <path d="M50 82 C 8 56, 8 18, 32 18 C 42 18, 50 26, 50 36
+                          C 50 26, 58 18, 68 18 C 92 18, 92 56, 50 82 Z"
+                fill="url(#hg)" stroke="#ffd0d8" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <h1 id="title" class="pulse">Draw something</h1>
+    <p id="sub">Use the corner-marker sheet. Hold it up — thumbs-up to send.</p>
+
+    <div class="steps">
+      <div class="step" data-id="show">1. Show drawing</div>
+      <div class="step" data-id="capture">2. Capture</div>
+      <div class="step" data-id="travel">3. Travel through cable</div>
+      <div class="step" data-id="live">4. Live in the world</div>
+    </div>
+
+    <script type="module" src="/instructions.ts"></script>
+  </body>
+</html>
