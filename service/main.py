@@ -338,6 +338,28 @@ async def template_sheet(width_mm: int = 297, height_mm: int = 210, marker_mm: i
                     headers={"Content-Disposition": "inline; filename=sheet.png"})
 
 
+@app.get("/template/sheet.html")
+async def template_sheet_html():
+    """Print-ready wrapper around /template/sheet.png — A4 landscape, 0 margin,
+    image stretched to 100vw/100vh so browser print at 1:1."""
+    html = """<!doctype html>
+<html><head><meta charset="utf-8"><title>Sheet</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  img { display: block; width: 100vw; height: 100vh; }
+  .hint { position: fixed; top: 4px; left: 4px; font: 12px sans-serif;
+          background: #ffffe0; padding: 2px 6px; }
+  @media print { .hint { display: none; } }
+</style></head>
+<body>
+  <div class="hint">Print → A4 landscape → margins: none → scale: 100%</div>
+  <img src="/template/sheet.png" alt="sheet">
+  <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),300));</script>
+</body></html>"""
+    return Response(content=html, media_type="text/html")
+
+
 @app.get("/template/grid.png")
 async def template_grid(
     width_mm: int = 297,

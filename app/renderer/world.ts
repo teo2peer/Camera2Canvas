@@ -5,6 +5,7 @@ import { PlatformerScene } from "./scenes/platformer";
 import { TankScene } from "./scenes/tank";
 import { RaceScene } from "./scenes/race";
 import { ShapeOrganizerScene } from "./scenes/shapeOrganizer";
+import { InvadersScene } from "./scenes/invaders";
 import { connect, send, ServiceEvent } from "./core/ws";
 import { library } from "./core/drawings";
 import { input } from "./core/input";
@@ -31,6 +32,7 @@ function switchTo(name: string) {
     case "tank": s = new TankScene(engine, canvas); break;
     case "race": s = new RaceScene(engine, canvas); break;
     case "shape": s = new ShapeOrganizerScene(engine, canvas); break;
+    case "invaders": s = new InvadersScene(engine, canvas); break;
     default: {
       const w = new WorldScene(engine, canvas);
       for (const d of library.list) w.addDrawing(d.url, d.palette, 1, false, d.id);
@@ -142,6 +144,7 @@ addEventListener("keydown", (e) => {
   if (e.code === "Digit3") switchTo("tank");
   if (e.code === "Digit4") switchTo("race");
   if (e.code === "Digit5") switchTo("shape");
+  if (e.code === "Digit6") switchTo("invaders");
 });
 
 // Optimistic removal from the admin panel — drop matching world meshes

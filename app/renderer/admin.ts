@@ -347,7 +347,7 @@ function renderGames(host: HTMLElement) {
       <div style="display:flex;gap:8px;flex-wrap:wrap" id="games"></div>
     </div>`;
   const wrap = host.querySelector("#games")!;
-  for (const g of ["world", "platformer", "tank", "race", "shape"]) {
+  for (const g of ["world", "platformer", "tank", "race", "shape", "invaders"]) {
     const b = document.createElement("button");
     b.className = "ad-btn"; b.textContent = g;
     b.addEventListener("click", () => send({ type: "admin:set_game", game: g }));
@@ -377,7 +377,7 @@ async function renderPreviewSection(host: HTMLElement) {
         : `<div class="ad-empty">No camera open in service</div>`}
     </div>`;
   host.querySelector("#sheet-print")!.addEventListener("click", () =>
-    api?.openExternal?.("http://127.0.0.1:8765/template/sheet.png"));
+    api?.openExternal?.("http://127.0.0.1:8765/template/sheet.html"));
   host.querySelector("#sheet-save")!.addEventListener("click", async () => {
     const r = await fetch("http://127.0.0.1:8765/template/sheet.png");
     const blob = await r.blob();
