@@ -10,3 +10,4 @@ data/drawings.db
 data/settings.json
 .DS_Store
 .vite/
+.claude/
